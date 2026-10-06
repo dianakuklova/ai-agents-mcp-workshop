@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Agents, MCP &amp; Real Work — sprievodca workshopom</title>
+<style>
+  :root{
+    --bg:#FAFAFC;
+    --ink:#132238;        /* deep navy structure */
+    --ink-soft:#1E3350;
+    --text:#1A2334;
+    --muted:#5B6676;
+    --line:#E6E8EE;
+    --accent:#3457D5;     /* indigo — structure / MCP wiring / active */
+    --accent-weak:#EAEEFC;
+    --done:#1A9E6B;       /* used only for completed states */
+    --warn:#D27A1E;       /* reserved for the "where it breaks" module */
+    --term:#0F1B2D;       /* terminal block bg */
+    --term-text:#D8E2F2;
+    --radius:5px;
+    --maxw:760px;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:var(--sans); font-size:16px; line-height:1.62;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    position:sticky; top:0; z-index:40;
+    display:flex; align-items:center; gap:18px;
+    padding:14px 24px; background:var(--ink); color:#fff;
+    border-bottom:1px solid rgba(255,255,255,.06);
+  }
+  .brand{display:flex; flex-direction:column; min-width:0}
+  .brand b{font-weight:700; font-size:15.5px; letter-spacing:-.01em; white-space:nowrap}
+  .brand span{font-size:12.5px; color:#9fb0c9}
+  .progress{margin-left:auto; display:flex; align-items:center; gap:12px; flex-shrink:0}
+  .progress .count{font-size:12.5px; color:#b9c6da; font-variant-numeric:tabular-nums}
+  .bar{width:120px; height:6px; border-radius:99px; background:rgba(255,255,255,.14); overflow:hidden}
+  .bar > i{display:block; height:100%; width:0%; background:var(--done); transition:width .35s ease}
+
+  /* ---------- layout ---------- */
+  .wrap{display:grid; grid-template-columns:272px 1fr; align-items:start}
+  .spine{
+    position:sticky; top:57px; align-self:start;
+    height:calc(100vh - 57px); overflow:auto;
+    padding:22px 14px 40px; border-right:1px solid var(--line);
+  }
+  .spine h2{
+    font-size:12px; font-weight:600; color:var(--muted);
+    margin:0 10px 10px; letter-spacing:.02em;
+  }
+  .nav{list-style:none; margin:0 0 20px; padding:0}
+  .nav li{margin:1px 0}
+  .nav button{
+    width:100%; display:flex; align-items:center; gap:11px;
+    background:none; border:none; cursor:pointer; text-align:left;
+    padding:8px 10px; border-radius:var(--radius); color:var(--text);
+    font-family:inherit; font-size:15px; line-height:1.3;
+  }
+  .nav button:hover{background:#F0F2F7}
+  .nav button.active{background:var(--accent-weak); color:var(--accent); font-weight:600}
+  .nav .num{
+    flex-shrink:0; width:24px; height:24px; border-radius:6px;
+    display:grid; place-items:center; font-size:12.5px; font-weight:600;
+    background:#EDEFF4; color:var(--muted); font-variant-numeric:tabular-nums;
+  }
+  .nav button.active .num{background:var(--accent); color:#fff}
+  .nav li.complete .num{background:var(--done); color:#fff}
+  .nav li.complete button.active .num{background:var(--done)}
+  .nav .label{min-width:0}
+  .nav .tick{margin-left:auto; color:var(--done); font-size:13px; opacity:0; flex-shrink:0}
+  .nav li.complete .tick{opacity:1}
+
+  /* ---------- content ---------- */
+  main{padding:40px 32px 120px}
+  .panel{display:none; max-width:var(--maxw); margin:0 auto}
+  .panel.active{display:block; animation:fade .3s ease}
+  @keyframes fade{from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:none}}
+
+  .eyebrow{display:flex; align-items:center; gap:10px; color:var(--muted); font-size:14px; margin-bottom:10px}
+  .eyebrow .chip{
+    display:inline-grid; place-items:center; min-width:26px; height:26px; padding:0 7px;
+    border-radius:6px; background:var(--ink); color:#fff; font-weight:700; font-size:13px;
+    font-variant-numeric:tabular-nums;
+  }
+  h1.mt{font-size:34px; line-height:1.1; letter-spacing:-.02em; margin:.1em 0 .35em; font-weight:750}
+  .lede{font-size:18px; color:#33415a; margin:0 0 28px}
+  h3{font-size:19px; letter-spacing:-.01em; margin:34px 0 8px; font-weight:680}
+  p{margin:12px 0}
+  a{color:var(--accent)}
+
+  .why{
+    border-left:3px solid var(--accent); background:#F5F7FE;
+    padding:14px 18px; border-radius:0 var(--radius) var(--radius) 0; margin:20px 0;
+  }
+  .why b{color:var(--ink)}
+  .say{
+    border-left:3px solid var(--done); background:#F2FAF6;
+    padding:12px 18px; border-radius:0 var(--radius) var(--radius) 0; margin:18px 0;
+    font-size:15px;
+  }
+  .say .k{display:block; font-size:12.5px; font-weight:600; color:var(--done); margin-bottom:3px}
+
+  /* code / command blocks */
+  .cmd{position:relative; margin:16px 0}
+  .cmd pre{
+    margin:0; background:var(--term); color:var(--term-text);
+    border-radius:var(--radius); padding:16px 54px 16px 18px; overflow:auto;
+    font-family:var(--mono); font-size:13.3px; line-height:1.6;
+  }
+  .cmd.prompt pre{white-space:pre-wrap; word-break:break-word}
+  .copy{
+    position:absolute; top:10px; right:10px;
+    border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:#cdd8ea;
+    font-family:inherit; font-size:12px; padding:5px 10px; border-radius:6px; cursor:pointer;
+  }
+  .copy:hover{background:rgba(255,255,255,.14)}
+  .copy.ok{color:#8ff0c2; border-color:rgba(143,240,194,.4)}
+  .cmd-cap{font-size:13px; color:var(--muted); margin:0 0 4px}
+
+  /* checkpoint */
+  .check{border:1px solid var(--line); border-radius:var(--radius); padding:6px 18px 10px; margin:24px 0}
+  .check > .h{font-size:13px; font-weight:600; color:var(--muted); margin:10px 0 4px}
+  .check label{display:flex; gap:11px; align-items:flex-start; padding:7px 0; cursor:pointer; font-size:15.5px}
+  .check input{margin-top:4px; width:17px; height:17px; accent-color:var(--done); flex-shrink:0; cursor:pointer}
+  .check label.done{color:var(--muted)}
+  .check label.done .lt{text-decoration:line-through}
+
+  ul.clean{margin:12px 0; padding-left:20px}
+  ul.clean li{margin:6px 0}
+  .kv{font-family:var(--mono); font-size:13px; background:#EDEFF4; padding:1px 6px; border-radius:4px}
+
+  .foot{display:flex; justify-content:space-between; gap:12px; margin-top:44px; padding-top:20px; border-top:1px solid var(--line)}
+  .foot button{
+    font-family:inherit; font-size:14.5px; padding:10px 16px; border-radius:var(--radius);
+    border:1px solid var(--line); background:#fff; color:var(--text); cursor:pointer;
+  }
+  .foot button:hover:not(:disabled){border-color:#c4ccda}
+  .foot button.next{background:var(--accent); color:#fff; border-color:var(--accent); margin-left:auto}
+  .foot button:disabled{opacity:.4; cursor:default}
+
+  /* hero loop diagram */
+  .hero{display:flex; gap:28px; align-items:center; flex-wrap:wrap; margin:6px 0 28px}
+  .loopfig{flex:0 0 220px}
+  @media (prefers-reduced-motion:no-preference){
+    .pulse{animation:pulse 2.4s ease-in-out infinite}
+  }
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+
+  /* table (cheat / troubleshooting) */
+  table{border-collapse:collapse; width:100%; margin:16px 0; font-size:14.5px}
+  th,td{text-align:left; vertical-align:top; padding:9px 12px; border-bottom:1px solid var(--line)}
+  th{font-size:12.5px; color:var(--muted); font-weight:600}
+  td code,.kv{font-family:var(--mono)}
+
+  /* faq */
+  details{border-bottom:1px solid var(--line); padding:4px 0}
+  summary{cursor:pointer; padding:12px 2px; font-weight:600; font-size:16px; list-style:none}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"+"; color:var(--accent); font-weight:700; margin-right:10px}
+  details[open] summary::before{content:"–"}
+  details .a{padding:0 2px 14px; color:#39465c}
+
+  .warn-accent{--accent:var(--warn); --accent-weak:#FBF1E4}
+
+  @media (max-width:880px){
+    .wrap{grid-template-columns:1fr}
+    .spine{
+      position:sticky; top:57px; height:auto; display:flex; gap:6px; overflow-x:auto;
+      border-right:none; border-bottom:1px solid var(--line); padding:10px 12px;
+    }
+    .spine h2{display:none}
+    .nav{display:flex; margin:0}
+    .nav button{white-space:nowrap}
+    .nav .label{display:none}
+    .nav .tick{display:none}
+    main{padding:28px 20px 100px}
+    h1.mt{font-size:28px}
+    .brand span{display:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <b>AI Agents, MCP &amp; Real Work</b>
+    <span>Sprievodca workshopom — klikaj sa ním vo vlastnom tempe</span>
+  </div>
+  <div class="progress">
+    <span class="count" id="count">0 / 0 hotové</span>
+    <div class="bar"><i id="barfill"></i></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <aside class="spine">
+    <h2>Obsah</h2>
+    <ul class="nav" id="nav"></ul>
+  </aside>
+
+  <main id="main"></main>
+</div>
+
+<script>
+/* ---------------- content model ---------------- */
+const term = (s)=>s.replace(/</g,"&lt;");
+
+const modules = [
+  {
+    id:"intro", num:"0", title:"Úvod a teória", sub:"Veľký obraz — prečo to celé.",
+    html:`
+      <div class="hero">
+        <div class="loopfig">
+          <svg viewBox="0 0 220 200" width="220" height="200" role="img" aria-label="Agent loop">
+            <defs><marker id="ah" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 Z" fill="#3457D5"/></marker></defs>
+            <circle cx="110" cy="100" r="74" fill="none" stroke="#E6E8EE" stroke-width="2"/>
+            <path d="M110 30 A74 74 0 0 1 174 138" fill="none" stroke="#3457D5" stroke-width="2" marker-end="url(#ah)"/>
+            <path d="M174 138 A74 74 0 0 1 46 138" fill="none" stroke="#3457D5" stroke-width="2" marker-end="url(#ah)"/>
+            <path d="M46 138 A74 74 0 0 1 110 30" fill="none" stroke="#3457D5" stroke-width="2" marker-end="url(#ah)"/>
+            <g font-family="ui-sans-serif,system-ui" font-size="13" font-weight="600" text-anchor="middle" fill="#132238">
+              <circle class="pulse" cx="110" cy="30" r="6" fill="#3457D5"/><text x="110" y="18">premýšľa</text>
+              <circle cx="174" cy="138" r="6" fill="#132238"/><text x="183" y="162">koná</text>
+              <circle cx="46" cy="138" r="6" fill="#132238"/><text x="40" y="162">pozoruje</text>
+            </g>
+          </svg>
+        </div>
+        <div style="flex:1; min-width:240px">
+          <div class="eyebrow"><span class="chip">0</span> Úvod a teória</div>
+          <h1 class="mt">Z asistenta, ktorý radí, robíme asistenta, ktorý koná.</h1>
+          <p class="lede">Dnes postavíš AI agenta, ktorý číta issues, otvára pull requesty a klikaním prechádza tvoju appku ako reálny človek — nie skratka na písanie kódu, ale parťák.</p>
+        </div>
+      </div>
+
+      <h3>Agentic coding a „agent loop"</h3>
+      <p>Klasický asistent ti kód <b>navrhne</b> — ty ho prijmeš alebo zamietneš. Agentický asistent dostane <b>cieľ</b> a sám sa rozhoduje, aké kroky spraviť. Beží to v cykle:</p>
+      <p style="font-family:var(--mono); font-size:13.5px; background:#EDEFF4; padding:12px 14px; border-radius:5px">cieľ → premýšľa → použije nástroj → pozrie výsledok → iteruje → hotovo</p>
+      <p>Povieš „oprav bug v prihlasovaní" a agent si <b>prečíta</b> súbory, <b>nájde</b> problém, <b>upraví</b> kód, <b>spustí</b> testy a keď padnú, skúša znova — bez toho, aby si mu každý krok diktovala.</p>
+
+      <h3>Claude Code</h3>
+      <p>Náš hlavný nástroj. Prináša ten agent loop priamo do terminálu (alebo VS Code). Má reálny prístup k súborom, vie spúšťať príkazy a pripájať sa na externé nástroje cez MCP. Beží na <b>Node.js 18+</b> a na <b>platenom pláne</b> alebo API kreditoch — free plán ho nespustí.</p>
+
+      <h3>MCP — Model Context Protocol</h3>
+      <p>Predtým sa každé spojenie AI s nástrojom (GitHub, databáza, Figma…) programovalo zvlášť. MCP je <b>otvorený štandard</b>, ktorý zavádza jeden spoločný „jazyk" medzi AI appkou a nástrojmi.</p>
+      <div class="why"><b>Analógia:</b> MCP je ako <b>USB-C pre AI</b> — jeden konektor, do ktorého zapojíš čokoľvek, namiesto vlastného kábla pre každý prístroj.</div>
+      <ul class="clean">
+        <li><b>Host</b> — appka, v ktorej pracuješ (Claude Code).</li>
+        <li><b>Server</b> — program, čo vystavuje schopnosti (GitHub, Playwright…).</li>
+        <li><b>Tools / Resources / Prompts</b> — akcie, ktoré model volá · dáta na čítanie · hotové šablóny.</li>
+      </ul>
+      <div class="say"><span class="k">Čo si z toho odniesť</span>MCP nie je ďalšia feature — je to infraštruktúrny posun. Štandard, ktorý mení pravidlá, a ekosystém serverov rastie rýchlo: GitHub, Figma, Postgres, Jira, Playwright.</div>
+    `
+  },
+  {
+    id:"prereq", num:"✓", title:"Predpoklady", sub:"Čo máš mať hotové ešte pred začiatkom.",
+    html:`
+      <div class="eyebrow"><span class="chip">✓</span> Predpoklady</div>
+      <h1 class="mt">Než začneš</h1>
+      <p class="lede">Over si, že toto beží. Keby niečo chýbalo, pozri si setup návod alebo zavolaj lektora.</p>
+      <div class="check" data-mod="prereq">
+        <label><input type="checkbox"><span class="lt">Node.js 18+ (over cez <span class="kv">node --version</span>)</span></label>
+        <label><input type="checkbox"><span class="lt">Claude Code nainštalovaný a prihlásený (<span class="kv">claude --version</span>, potom <span class="kv">claude</span>)</span></label>
+        <label><input type="checkbox"><span class="lt">Čistý testovací GitHub repo s 1–2 otvorenými issues</span></label>
+        <label><input type="checkbox"><span class="lt">GitHub PAT dostupný ako <span class="kv">GITHUB_PAT</span></span></label>
+        <label><input type="checkbox"><span class="lt">Playwright browsery (<span class="kv">npx playwright install</span>)</span></label>
+      </div>
+    `
+  },
+  {
+    id:"m1", num:"1", title:"Postav demo appku", sub:"Niečo reálne, na čom agent koná.",
+    html:`
+      <div class="eyebrow"><span class="chip">1</span> Modul 1</div>
+      <h1 class="mt">Postav niečo, na čom sa dá pracovať</h1>
+      <p class="lede">Agent potrebuje niečo reálne. Nechaj Claude Code vygenerovať malú stránku s interakciou, cez ktorú neskôr Playwright preklikáva.</p>
+      <div class="why">Tie <span class="kv">id</span> atribúty na prvkoch sú tam schválne — Playwright ich v Module 4 potrebuje, aby vedel spoľahlivo klikať.</div>
+      <p class="cmd-cap">Vlož tento prompt do Claude Code:</p>
+      ${cmd(`Create a simple static web page as a single index.html file with the CSS inline in a <style> tag. No frameworks, no extra JavaScript beyond what's needed for the interaction below. Goal: it should serve as a demo that Playwright MCP will later open and click through.
+
+Page content:
+- An <h1> heading with the text "Workshop Demo".
+- A short paragraph describing the page.
+- A simple contact form with fields:
+  - Name (input, id="name")
+  - Email (input type email, id="email")
+  - Message (textarea, id="message")
+  - A "Submit" button (id="submit")
+- When Submit is clicked, show a confirmation message (without a page reload, via a small bit of JS) in an element with id="confirmation", e.g. "Thank you, your message has been sent."
+
+Design:
+- Clean, minimalist CSS: centered content, a max-width container, readable font, subtle borders and padding on the form.
+- No external resources (no CDN, fonts, or images) — everything offline in a single file.
+
+At the end, tell me how to open/run the page locally.`, true)}
+      <div class="say"><span class="k">To bol prvý agent loop</span>Model prečítal zadanie, rozhodol sa vytvoriť súbor a vykonal to.</div>
+      <div class="check" data-mod="m1">
+        <div class="h">Checkpoint</div>
+        <label><input type="checkbox"><span class="lt"><span class="kv">index.html</span> existuje a otvorí sa v prehliadači</span></label>
+        <label><input type="checkbox"><span class="lt">Formulár odošle a zobrazí potvrdzovaciu hlášku</span></label>
+        <label><input type="checkbox"><span class="lt"><span class="kv">id</span> atribúty sú prítomné</span></label>
+      </div>
+    `
+  },
+  {
+    id:"m2", num:"2", title:"/grill-me", sub:"Rubber duck, ktorý hryzie.",
+    html:`
+      <div class="eyebrow"><span class="chip">2</span> Modul 2</div>
+      <h1 class="mt">/grill-me — kačka, ktorá hryzie</h1>
+      <p class="lede">Agentický workflow sa rozpadne, keď je zadanie fuzzy. Tvoj prvý custom príkaz je neúprosný interviewer, ktorý ťa nepustí ďalej, kým nie je úloha poriadne zadefinovaná.</p>
+      <h3>Vytvor slash command</h3>
+      <p>Založ súbor <span class="kv">.claude/commands/grill-me.md</span> s inštrukciami, aby agent:</p>
+      <ul class="clean">
+        <li>kládol otázky postupne, jednu po druhej,</li>
+        <li>nepokračoval, kým nie sú jasné vstupy, výstupy, edge cases a akceptačné kritériá,</li>
+        <li>na záver zhrnul dohodnutú definíciu úlohy.</li>
+      </ul>
+      <h3>Odskúšaj</h3>
+      <p>Zavolaj <span class="kv">/grill-me</span> a zadaj vágnu feature, napr. „pridaj vyhľadávanie na stránku". Nechaj ho vypytovať sa.</p>
+      <div class="why">Presný formát skills vs. slash commands sa vyvíja — keby niečo nesedelo, over v <a href="https://docs.claude.com/en/docs/claude-code/overview" target="_blank" rel="noopener">docs</a>.</div>
+      <div class="check" data-mod="m2">
+        <div class="h">Checkpoint</div>
+        <label><input type="checkbox"><span class="lt"><span class="kv">/grill-me</span> reálne tlačí a neprijme nedomyslené zadanie</span></label>
+        <label><input type="checkbox"><span class="lt">Na konci vyprodukuje jasnú definíciu úlohy</span></label>
+      </div>
+    `
+  },
+  {
+    id:"m3", num:"3", title:"GitHub MCP", sub:"Celý dev loop bez opustenia editora.",
+    html:`
+      <div class="eyebrow"><span class="chip">3</span> Modul 3</div>
+      <h1 class="mt">Zapoj GitHub MCP server</h1>
+      <p class="lede">Teraz dáš agentovi reálny kontext o tvojom prostredí. Pripoj GitHub server a sleduj, ako odrobí celý vývojový loop z terminálu.</p>
+      <div class="why">GitHub oficiálne odporúča <b>remote HTTP</b> server. Starý npm balík <span class="kv">@modelcontextprotocol/server-github</span> je deprecated.</div>
+      <p class="cmd-cap">Pridaj server:</p>
+      ${cmd(`claude mcp add --scope project --transport http github \\
+  https://api.githubcopilot.com/mcp/ \\
+  --header "Authorization: Bearer \${GITHUB_PAT}"`)}
+      <p>Over cez <span class="kv">/mcp</span> — <span class="kv">github</span> má byť „connected".</p>
+      <h3>Nechaj agenta prejsť celý loop</h3>
+      <ul class="clean">
+        <li>Prečítať otvorené issues v repe.</li>
+        <li>Vybrať jedno a spraviť malú zmenu (napr. upraviť stránku z Modulu 1).</li>
+        <li>Vytvoriť pull request.</li>
+        <li>Pridať komentár do code review.</li>
+      </ul>
+      <div class="check" data-mod="m3">
+        <div class="h">Checkpoint</div>
+        <label><input type="checkbox"><span class="lt">Agent prečítal issues z repa</span></label>
+        <label><input type="checkbox"><span class="lt">Agent vytvoril PR</span></label>
+        <label><input type="checkbox"><span class="lt">Agent komentoval review — bez dotyku GitHub UI</span></label>
+      </div>
+    `
+  },
+  {
+    id:"m4", num:"4", title:"Playwright MCP", sub:"Agent používa appku ako user.",
+    html:`
+      <div class="eyebrow"><span class="chip">4</span> Modul 4</div>
+      <h1 class="mt">Playwright MCP — používaj appku ako reálny user</h1>
+      <p class="lede">„Works on my machine" tu končí. Agent naviguje tvoju appku ako človek — kliká, robí screenshoty a chytá to, čo sa prejaví až pri reálnom použití.</p>
+      <p class="cmd-cap">Pridaj server:</p>
+      ${cmd(`claude mcp add --scope project playwright -- npx -y @playwright/mcp@latest`)}
+      <p>Over cez <span class="kv">/mcp</span>. Prejdi 3 priechody v poradí.</p>
+
+      <h3>4a — Happy path</h3>
+      ${cmd(`Open the index.html file in the browser via Playwright. Fill in the form with test data:
+name "John Smith", email "john@example.com", message "This is a test message".
+Click the Submit button (id="submit"). Verify that the confirmation message appears
+in the element with id="confirmation". Take a screenshot of the resulting page and tell me what you saw.`, true)}
+
+      <h3>4b — Error state</h3>
+      ${cmd(`Open index.html via Playwright. Try to submit the form in ways that test error states:
+1. Leave the email field empty and click Submit — check how the page behaves.
+2. Enter an invalid email (e.g. "abc") and click Submit — check whether the browser or the
+   page shows a validation error.
+After each attempt take a screenshot and describe what happened. At the end, tell me whether
+the page behaves as it should and what could be improved.`, true)}
+
+      <h3>4c — Full QA pass</h3>
+      ${cmd(`Take index.html and run a full QA pass via Playwright as a real user would:
+1. Open the page and take a screenshot of the initial state.
+2. Check that all elements are present: heading, form, name/email/message fields, Submit button.
+3. Test the happy path — fill in valid data, submit, verify the confirmation message, screenshot.
+4. Test the error state — empty or invalid email, verify the behavior, screenshot.
+5. Give me a short report: what works, what doesn't, and a list of issues found with recommendations.
+Work step by step and after each step tell me what you did.`, true)}
+      <div class="why">Tip: pridaj <span class="kv">--save-video</span> k Playwright serveru, nech sa celý beh nahrá ako video.</div>
+      <div class="check" data-mod="m4">
+        <div class="h">Checkpoint</div>
+        <label><input type="checkbox"><span class="lt">Agent navigoval stránku a spravil screenshoty</span></label>
+        <label><input type="checkbox"><span class="lt">Sám odhalil error-state správanie</span></label>
+        <label><input type="checkbox"><span class="lt">Vyprodukoval QA report</span></label>
+      </div>
+    `
+  },
+  {
+    id:"m5", num:"5", title:"Kde to breakne", sub:"Chápať limity, nie len možnosti.", warn:true,
+    html:`
+      <div class="eyebrow"><span class="chip" style="background:var(--warn)">5</span> Modul 5</div>
+      <h1 class="mt">Kde to breakne</h1>
+      <p class="lede">Reálne nasadenie znamená chápať limity. Pokaz veci naschvál a nauč sa ich opraviť — to je tá skutočná zručnosť.</p>
+      <p><b>Vyvolaj aspoň dve a oprav každú:</b></p>
+      <ul class="clean">
+        <li><span class="kv">command not found: npx</span> — Node / PATH problém (hlavne vo WSL)</li>
+        <li>MCP server sa nespustí — preklep v konfigu alebo nenastavený <span class="kv">GITHUB_PAT</span></li>
+        <li>GitHub PAT bez práv — agent nevie vytvoriť PR</li>
+        <li>Playwright bez browserov — padne pri navigácii</li>
+        <li>Agent sa zacyklí / urobí deštruktívnu operáciu — ako zastaviť (<span class="kv">Esc</span>) a vrátiť gitom</li>
+      </ul>
+      <p>Pri každom si zapíš <b>ako to spoznáš</b> (chybová hláška) a <b>ako to opravíš</b>.</p>
+      <div class="check" data-mod="m5">
+        <div class="h">Checkpoint</div>
+        <label><input type="checkbox"><span class="lt">Vyvolal/a som a opravil/a aspoň 2 zlyhania</span></label>
+        <label><input type="checkbox"><span class="lt">Viem agenta zastaviť (<span class="kv">Esc</span>) a vrátiť zmeny gitom</span></label>
+      </div>
+      <div class="say"><span class="k">Hotovo — čo si postavil/a</span>Z obyčajného asistenta je nástroj, ktorý rozumie problému, rozhoduje sa a vykonáva naprieč toolchainom. Rovnaké patterny platia pre Figma, Postgres, Jira — aj pre Copilot a Cursor.</div>
+    `
+  },
+  {
+    id:"cheat", num:"⌘", title:"Cheat-sheet", sub:"Všetky príkazy na jednom mieste.",
+    html:`
+      <div class="eyebrow"><span class="chip">⌘</span> Cheat-sheet</div>
+      <h1 class="mt">Všetky príkazy pokope</h1>
+      <p class="cmd-cap">Setup</p>
+      ${cmd(`node --version
+npm install -g @anthropic-ai/claude-code
+claude --version
+claude`)}
+      <p class="cmd-cap">GitHub PAT</p>
+      ${cmd(`export GITHUB_PAT=ghp_xxx`)}
+      <p class="cmd-cap">MCP servery</p>
+      ${cmd(`claude mcp add --scope project --transport http github \\
+  https://api.githubcopilot.com/mcp/ \\
+  --header "Authorization: Bearer \${GITHUB_PAT}"
+
+claude mcp add --scope project playwright -- npx -y @playwright/mcp@latest
+
+npx playwright install`)}
+      <p class="cmd-cap">V Claude Code</p>
+      ${cmd(`/mcp        # zoznam serverov a ich stav
+/grill-me   # náš custom príkaz
+Esc         # zastaviť bežiaceho agenta`)}
+      <p class="cmd-cap">Git záchrana</p>
+      ${cmd(`git status
+git checkout -- .      # zahodí lokálne zmeny
+git reset --hard HEAD  # tvrdý reset (pozor!)`)}
+      <p class="cmd-cap">.mcp.json (do roota repa; tokeny cez env)</p>
+      ${cmd(`{
+  "mcpServers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": { "Authorization": "Bearer \${GITHUB_PAT}" }
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
+    }
+  }
+}`)}
+    `
+  },
+  {
+    id:"faq", num:"?", title:"FAQ a problémy", sub:"Otázky a rýchly troubleshooting.",
+    html:`
+      <div class="eyebrow"><span class="chip">?</span> FAQ a riešenie problémov</div>
+      <h1 class="mt">Keď niečo zlyhá alebo ťa niečo trápi</h1>
+
+      <h3>Časté otázky</h3>
+      <details><summary>Je to zadarmo?</summary><div class="a">Účet a inštalácia áno. Používanie Claude Code nie — treba platený plán (Pro od ~20 €/mes.) alebo API kredity. Najbližšie k zadarmo je Console účet s trial kreditmi (~5 USD, bez karty), vydrží na pár sessions.</div></details>
+      <details><summary>Terminál alebo VS Code?</summary><div class="a">Ako chceš — je to ten istý Claude Code. VS Code rozšírenie (publisher Anthropic, overený checkmark) dáva panel v editore; CLI je spoľahlivý fallback. Obe potrebujú CLI pod kapotou a platený plán.</div></details>
+      <details><summary>Je bezpečné dať agentovi prístup k GitHubu?</summary><div class="a">Daj PAT s minimálnym rozsahom a na testovacom repe. Token nikdy nedávaj natvrdo do súborov — cez <span class="kv">GITHUB_PAT</span>. Dá sa kedykoľvek zrušiť na GitHube.</div></details>
+      <details><summary>Čo ak agent spraví hlúposť?</summary><div class="a">Preto robíme na testovacom repe a používame git. Zastavíš ho <span class="kv">Esc</span>. Zmeny vrátiš cez <span class="kv">git checkout</span> / <span class="kv">git reset</span>.</div></details>
+      <details><summary>Funguje to aj s Copilot / Cursor?</summary><div class="a">Áno. MCP je otvorený štandard, takže tie isté servery a patterny bežia naprieč agent-capable nástrojmi. Mení sa povrch, nie princíp.</div></details>
+
+      <h3>Rýchly troubleshooting</h3>
+      <table>
+        <tr><th>Príznak</th><th>Riešenie</th></tr>
+        <tr><td><code>command not found: npx</code></td><td>Nainštaluj Node 18+; vo WSL inštaluj Node vnútri WSL</td></tr>
+        <tr><td>Claude Code neprihlási</td><td>Over platený plán / kredity; prihlás sa znova</td></tr>
+        <tr><td>Server nie je „connected" v <code>/mcp</code></td><td>Skontroluj konfig, <code>echo $GITHUB_PAT</code>, reštartuj session</td></tr>
+        <tr><td>Agent nevie vytvoriť PR</td><td>PAT s rozsahom repo/issues/PR; nastav znova</td></tr>
+        <tr><td>Playwright padne pri navigácii</td><td><code>npx playwright install</code></td></tr>
+        <tr><td>Agent sa zacyklí</td><td><code>Esc</code>; vráť gitom; sprav zadanie konkrétnejším</td></tr>
+      </table>
+      <p style="margin-top:22px; color:var(--muted); font-size:14px">Mení sa to rýchlo — over v <a href="https://docs.claude.com/en/docs/claude-code/overview" target="_blank" rel="noopener">Claude Code docs</a> a na <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">modelcontextprotocol.io</a>.</p>
+    `
+  }
+];
+
+function cmd(text, isPrompt){
+  return `<div class="cmd ${isPrompt?'prompt':''}">
+    <button class="copy" type="button">Kopírovať</button>
+    <pre>${term(text)}</pre>
+  </div>`;
+}
+
+/* ---------------- render ---------------- */
+const nav = document.getElementById('nav');
+const main = document.getElementById('main');
+let current = 0;
+
+modules.forEach((m,i)=>{
+  const li = document.createElement('li');
+  li.dataset.mod = m.id;
+  li.innerHTML = `<button data-i="${i}">
+      <span class="num">${m.num}</span>
+      <span class="label">${m.title}</span>
+      <span class="tick">✓</span>
+    </button>`;
+  nav.appendChild(li);
+
+  const panel = document.createElement('section');
+  panel.className = 'panel' + (m.warn?' warn-accent':'');
+  panel.id = 'panel-'+m.id;
+  panel.innerHTML = m.html + footNav(i);
+  main.appendChild(panel);
+});
+
+function footNav(i){
+  const prev = i>0 ? `<button class="prev" data-i="${i-1}">← Späť</button>` : `<span></span>`;
+  const next = i<modules.length-1 ? `<button class="next" data-i="${i+1}">Ďalej →</button>` : `<span></span>`;
+  return `<div class="foot">${prev}${next}</div>`;
+}
+
+function show(i){
+  current = i;
+  document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active', idx===i));
+  document.querySelectorAll('.nav button[data-i]').forEach(b=>b.classList.toggle('active', +b.dataset.i===i));
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+/* clicks: nav + prev/next */
+document.addEventListener('click', (e)=>{
+  const navBtn = e.target.closest('.nav button[data-i]');
+  if(navBtn){ show(+navBtn.dataset.i); return; }
+  const foot = e.target.closest('.foot button[data-i]');
+  if(foot){ show(+foot.dataset.i); return; }
+  const cp = e.target.closest('.copy');
+  if(cp){ copy(cp); return; }
+});
+
+/* copy to clipboard with fallback for file:// */
+function copy(btn){
+  const text = btn.parentElement.querySelector('pre').innerText;
+  const done = ()=>{ btn.textContent='Skopírované ✓'; btn.classList.add('ok');
+    setTimeout(()=>{ btn.textContent='Kopírovať'; btn.classList.remove('ok'); }, 1600); };
+  if(navigator.clipboard && window.isSecureContext){
+    navigator.clipboard.writeText(text).then(done).catch(()=>fallback(text,done));
+  } else { fallback(text, done); }
+}
+function fallback(text, done){
+  const ta=document.createElement('textarea'); ta.value=text;
+  ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta);
+  ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); done();
+}
+
+/* checkpoints → progress (in-memory) */
+function refresh(){
+  const boxes = [...document.querySelectorAll('.check input[type=checkbox]')];
+  const total = boxes.length;
+  const done = boxes.filter(b=>b.checked).length;
+  document.getElementById('count').textContent = `${done} / ${total} hotové`;
+  document.getElementById('barfill').style.width = total? (done/total*100)+'%' : '0%';
+  // per-module complete marker
+  document.querySelectorAll('.check[data-mod]').forEach(c=>{
+    const b=[...c.querySelectorAll('input')];
+    const all=b.length>0 && b.every(x=>x.checked);
+    const li=document.querySelector(`.nav li[data-mod="${c.dataset.mod}"]`);
+    if(li) li.classList.toggle('complete', all);
+  });
+}
+document.addEventListener('change', (e)=>{
+  if(e.target.matches('.check input')){
+    const lbl=e.target.closest('label'); if(lbl) lbl.classList.toggle('done', e.target.checked);
+    refresh();
+  }
+});
+
+show(0); refresh();
+</script>
+</body>
+</html>
