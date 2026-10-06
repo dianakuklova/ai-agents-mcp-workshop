@@ -1,0 +1,36 @@
+# --- Secrets / environment ---
+# Never commit tokens (GITHUB_PAT) or other secrets
+.env
+.env.*
+*.local
+secrets.*
+
+# --- Node ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm/
+
+# --- Playwright ---
+# Test artifacts the agent produces during the workshop
+test-results/
+playwright-report/
+playwright/.cache/
+# Screenshots & videos captured by the Playwright MCP demo
+*.webm
+screenshots/
+videos/
+
+# --- Claude Code ---
+# Local, machine-specific settings (keep shared config and commands tracked)
+.claude/settings.local.json
+
+# --- OS / editor noise ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
