@@ -1,0 +1,115 @@
+<!--
+  ⚠️ INTENTIONALLY BROKEN — demo page for running /code-review and /complete-work.
+  It is riddled with real, catchable problems: accessibility gaps, JS bugs,
+  a hardcoded secret, debug debris, dead code, and deliberately generic design.
+  Do NOT use as a template. It exists to be reviewed.
+-->
+<html>
+<head>
+<title>Zrno Café</title>
+<style>
+  body{font-family:Arial;margin:0;background:#fff;color:#ccc}
+  .hero{background:linear-gradient(135deg,#7b2ff7,#2b1055);color:white;padding:80px 20px;text-align:center}
+  .hero h1{font-size:48px;margin:0}
+  .btn{background:#7b2ff7;color:#fff;padding:14px 28px;border:none;border-radius:8px;cursor:pointer;outline:none !important}
+  .cards{display:flex;gap:20px;padding:40px;justify-content:center}
+  .card{width:280px;border:1px solid #eee;border-radius:12px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,.1);text-align:center}
+  .card .icon{font-size:40px}
+  input{padding:10px;border:1px solid #ddd;outline:none !important}
+  .ticker{position:fixed;bottom:0;left:0;right:0;background:#7b2ff7;color:#fff;padding:8px;z-index:99999;animation:slide 2s linear infinite}
+  @keyframes slide{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
+  .muted{color:#ddd;font-size:11px}
+</style>
+</head>
+<body onload="startup()">
+
+  <div class="hero">
+    <h1>Welcome to Zrno Café</h1>
+    <h4>The best coffee in town, probably</h4>
+    <div class="btn" id="cta" onclick="order()">Order now</div>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="icon">☕</div>
+      <h3>Great Coffee</h3>
+      <p class="muted">Lorem ipsum dolor sit amet, consectetur adipiscing elit sed do.
+    </div>
+    <div class="card">
+      <div class="icon">☕</div>
+      <h3>Great Coffee</h3>
+      <p class="muted">Lorem ipsum dolor sit amet, consectetur adipiscing elit sed do.
+    </div>
+    <div class="card">
+      <div class="icon">☕</div>
+      <h3>Great Coffee</h3>
+      <p class="muted">Lorem ipsum dolor sit amet, consectetur adipiscing elit sed do.
+    </div>
+  </div>
+
+  <div style="padding:40px;text-align:center">
+    <img src="coffee.jpg" width="600">
+    <h2 style="color:#333">Find us</h2>
+    <p style="color:#ccc">123 Coffee Street &middot; <a href="javascrpt:void(0)">Directions</a></p>
+    <p><a href="#">Menu</a> | <a href="#">About</a> | <a href="mailto:hello@zrno">Email us</a></p>
+
+    <!-- newsletter signup -->
+    <h3 style="color:#333">Newsletter</h3>
+    <form id="signup">
+      <input type="text" id="email" placeholder="Your email">
+      <button class="btn" id="cta">Subscribe</button>
+    </form>
+    <p id="result"></p>
+  </div>
+
+  <!-- TODO: replace with real opening hours before launch -->
+  <div style="padding:20px;text-align:center" class="muted">
+    Open daily. TODO: add hours.
+  </div>
+
+  <div class="ticker">🔥 50% off all drinks today only!!! 🔥</div>
+
+<script>
+  // FIXME: remove before production
+  var API_KEY = "sk_live_9f8a7b6c5d4e3f2a1b0c_DO_NOT_SHIP";
+  console.log("booting Zrno site, key =", API_KEY);
+
+  function startup(){
+    alert("Welcome to Zrno!!!");
+    console.log("page loaded");
+    // greet based on hour
+    var h = new Date().getHours();
+    if (h = 12) {            // bug: assignment instead of comparison
+      console.log("lunchtime");
+    }
+  }
+
+  function order(){
+    console.log("order clicked");
+    // old flow, keep just in case
+    // placeOrder();
+    // sendAnalytics('order', user);
+    doCheckout();            // bug: doCheckout is never defined
+  }
+
+  // newsletter
+  document.getElementById("signup").onsubmit = function(){
+    var val = document.getElementById("emial").value;   // typo: wrong id -> throws
+    var out = document.getElementById("result");
+    if (val == "") {                                    // loose equality
+      out.innerHTML = "Please enter <b>" + val + "</b>"; // unsanitized -> XSS
+    }
+    // missing return false / preventDefault -> form reloads the page
+  };
+
+  // count the cards (off-by-one)
+  var cards = document.getElementsByClassName("card");
+  for (var i = 0; i <= cards.length; i++){
+    console.log("card", i);                             // last iteration is undefined
+  }
+
+  var unused = computeTotal();                           // dead call, function below unused elsewhere
+  function computeTotal(){ return 1 + 1 }
+</script>
+</body>
+</html>
