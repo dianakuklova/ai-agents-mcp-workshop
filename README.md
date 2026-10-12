@@ -6,7 +6,7 @@ A hands-on workshop on **agentic coding** with [Claude Code](https://docs.claude
 
 ## Start here → the interactive guide
 
-Open **[`workshop-guide.html`](workshop-guide-en.html)** in your browser and step through it at your own pace. Theory, every command ready to copy, and checkpoints you can tick off. Missed something live? Catch up here.
+Open **[`workshop-guide.html`](workshop-guide-en.md)** in your browser and step through it at your own pace. Theory, every command ready to copy, and checkpoints you can tick off. Missed something live? Catch up here.
 
 > If GitHub Pages is enabled for this repo, the guide is also available online — see the link in the repo's **About** section.
 
