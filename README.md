@@ -55,10 +55,9 @@ claude
 
 0. **Intro & theory** — the agent loop, Claude Code, and what MCP is
 1. **Build a demo app** — give the agent something real to work on
-2. **`/grill-me`** — a custom skill that refuses fuzzy task definitions
-3. **GitHub MCP** — the agent reads issues, opens PRs, comments on reviews
-4. **Playwright MCP** — the agent clicks through the app like a real user
-5. **Where it breaks** — debugging, limits, and recovering with git
+2. **GitHub MCP** — the agent reads issues, opens PRs, comments on reviews
+3. **Playwright MCP** — the agent clicks through the app like a real user
+4. **Where it breaks** — debugging, limits, and recovering with git
 
 ## MCP configuration
 
